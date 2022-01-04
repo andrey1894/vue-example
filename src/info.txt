@@ -3,6 +3,11 @@
 структурные директивы
 Всплытие событий. Только на уровне компонента. Напр клик.
 
+Vue добавляет bind для методов. setInterval(this.updateTickers, 5000)
+
 2 vs 3
 - реактивность. Добавляет set/get в объекты. Плохо отслеживает массивы VS Proxy. отслеживает массивы, объекты
 - JS VS TS
+
+
+Object.fromEntries(Object.entries(rawData).map(([key, value]) => [key, value ? 1 / value : value]))
