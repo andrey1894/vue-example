@@ -139,7 +139,7 @@
 </template>
 
 <script>
-import { loadTickers, subscribeTicker, unsubscribeTicker } from './api'
+import { subscribeTicker, unsubscribeTicker } from './api'
 
 export default {
   name: 'App',
@@ -297,8 +297,6 @@ export default {
       if (!this.tickers.length) {
         return
       }
-
-      loadTickers()
 
       // const exchangeData = await loadTicker(this.tickers.map((t) => t.name))
       // console.log(exchangeData)

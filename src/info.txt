@@ -11,3 +11,4 @@ Vue добавляет bind для методов. setInterval(this.updateTicker
 
 
 Object.fromEntries(Object.entries(rawData).map(([key, value]) => [key, value ? 1 / value : value]))
+Object.entries(updatedPrices).forEach(([currency, newPrice]) => {})
