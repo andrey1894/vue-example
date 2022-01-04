@@ -139,7 +139,7 @@
 </template>
 
 <script>
-import { loadTicker } from './api'
+import { loadTickers, subscribeTicker, unsubscribeTicker } from './api'
 
 export default {
   name: 'App',
@@ -171,7 +171,10 @@ export default {
     try {
       const tickers = JSON.parse(localStorage.getItem('tickers'))
       this.tickers = Array.isArray(tickers) ? tickers : []
-      // setInterval(this.updateTickers, 5000)
+      this.tickers.forEach((t) => {
+        subscribeTicker(t.name, (price) => this.updateTicker(t.name, price))
+      })
+      setInterval(this.updateTickers, 5000)
     } catch {
       this.tickers = []
     }
@@ -251,6 +254,13 @@ export default {
   },
 
   methods: {
+    updateTicker(tickerName, price) {
+      const ticker = this.tickers.find((t) => t.name === tickerName)
+      if (ticker) {
+        ticker.price = price
+      }
+    },
+
     selectSimilarTicker(tickerName) {
       this.tickerName = tickerName
       this.addTicker()
@@ -269,6 +279,7 @@ export default {
         price: 123,
       }
       this.tickers = [...this.tickers, ticker]
+      subscribeTicker(ticker.name, (price) => this.updateTicker(ticker.name, price))
       this.tickerName = ''
     },
 
@@ -278,6 +289,8 @@ export default {
       if (this.currentTicker === ticker) {
         this.currentTicker = null
       }
+
+      unsubscribeTicker(ticker.name)
     },
 
     async updateTickers() {
@@ -285,12 +298,14 @@ export default {
         return
       }
 
-      const exchangeData = await loadTicker(this.tickers.map((t) => t.name))
-      console.log(exchangeData)
-      this.tickers.forEach((t) => {
-        const price = exchangeData[t.name.toUpperCase()]
-        t.price = price ?? '-'
-      })
+      loadTickers()
+
+      // const exchangeData = await loadTicker(this.tickers.map((t) => t.name))
+      // console.log(exchangeData)
+      // this.tickers.forEach((t) => {
+      //   const price = exchangeData[t.name.toUpperCase()]
+      //   t.price = price ?? '-'
+      // })
     },
 
     formatPrice(price) {
