@@ -6,50 +6,9 @@
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
     </div>
+
     <div class="container">
-      <section>
-        <div class="flex">
-          <div class="max-w-xs">
-            <label for="wallet" class="block text-sm font-medium text-gray-700">Тикер</label>
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                type="text"
-                name="wallet"
-                id="wallet"
-                v-model="tickerName"
-                @input="isExistTickerError = false"
-                @keydown.enter="addTicker()"
-                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                placeholder="Например DOGE"
-              />
-            </div>
-            <div v-show="similarTickerNames.length" class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
-              <button
-                v-for="name in similarTickerNames"
-                :key="name"
-                @click="selectSimilarTicker(name)"
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                {{ name }}
-              </button>
-            </div>
-            <div v-show="isExistTickerError" class="text-sm text-red-600">Такой тикер уже добавлен</div>
-          </div>
-        </div>
-        <button
-          type="button"
-          @click="addTicker()"
-          class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        >
-          <!-- Heroicon name: solid/mail -->
-          <svg class="-ml-0.5 mr-2 h-6 w-6" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#ffffff">
-            <path
-              d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-            ></path>
-          </svg>
-          Добавить
-        </button>
-      </section>
+      <add-ticker :tickers="tickers" :coin-list="coinList" @add-ticker="addTicker"></add-ticker>
 
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
@@ -76,7 +35,7 @@
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            @click="currentTicker = t"
+            @click="selectTicker(t)"
             v-for="t in paginatedTickers"
             :key="t"
             :class="{ 'border-4': currentTicker === t }"
@@ -107,7 +66,7 @@
 
       <section class="relative" v-if="currentTicker">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ currentTicker.name }} - USD</h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div class="flex items-end border-gray-600 border-b border-l h-64" ref="graph">
           <div v-for="(bar, i) in normalizedGraph" :key="i" :style="{ height: `${bar}%` }" class="bg-purple-800 border w-10 h-24">{{ bar }}</div>
         </div>
         <button type="button" class="absolute top-0 right-0" @click="currentTicker = null">
@@ -140,14 +99,19 @@
 
 <script>
 import { subscribeTicker, unsubscribeTicker } from './api'
+import AddTicker from './components/AddTicker.vue'
 
 export default {
   name: 'App',
+
+  components: {
+    AddTicker,
+  },
+
   data() {
     return {
       showLoader: true,
       coinList: [],
-      tickerName: 'BTC',
       tickers: [],
       graph: [],
       currentTicker: null,
@@ -155,12 +119,13 @@ export default {
 
       page: 1,
       filter: '',
-      total: 2,
+      total: 4,
+
+      maxGraphElements: 0,
     }
   },
   async created() {
     const filterData = Object.fromEntries(new URL(window.location).searchParams.entries())
-    console.log(filterData)
     this.filter = filterData.filter || ''
     this.page = +filterData.page || 1
 
@@ -174,10 +139,17 @@ export default {
       this.tickers.forEach((t) => {
         subscribeTicker(t.name, (price) => this.updateTicker(t.name, price))
       })
-      setInterval(this.updateTickers, 5000)
     } catch {
       this.tickers = []
     }
+  },
+
+  mounted() {
+    window.addEventListener('resize', this.calculateMaxGraphElements)
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', this.calculateMaxGraphElements)
   },
 
   computed: {
@@ -210,17 +182,6 @@ export default {
       return maxVal === minVal ? this.graph.map(() => 50) : this.graph.map((price) => (5 + ((price - minVal) * 95) / (maxVal - minVal)).toFixed(1))
     },
 
-    similarTickerNames() {
-      const similarTickerNames = []
-      for (let i = 0, count = 0; i < this.coinList.length && count < 5; i++) {
-        if (this.coinList[i].includes(this.tickerName.toUpperCase())) {
-          similarTickerNames.push(this.coinList[i])
-          count++
-        }
-      }
-      return similarTickerNames
-    },
-
     pageStateOptions() {
       return {
         filter: this.filter,
@@ -232,6 +193,7 @@ export default {
   watch: {
     currentTicker() {
       this.graph = []
+      this.$nextTick().then(this.calculateMaxGraphElements)
     },
 
     tickers() {
@@ -258,29 +220,32 @@ export default {
       const ticker = this.tickers.find((t) => t.name === tickerName)
       if (ticker) {
         ticker.price = price
+        if (ticker === this.currentTicker) {
+          this.graph.push(ticker.price)
+          if (this.graph.length > this.maxGraphElements) {
+            this.graph.splice(0, this.graph.length - this.maxGraphElements)
+          }
+        }
       }
     },
 
-    selectSimilarTicker(tickerName) {
-      this.tickerName = tickerName
-      this.addTicker()
+    selectTicker(ticker) {
+      this.currentTicker = ticker
     },
 
-    addTicker() {
-      if (this.tickers.find((t) => t.name === this.tickerName)) {
-        this.isExistTickerError = true
+    addTicker(tickerName) {
+      if (!tickerName) {
+        console.log('empty ticker')
         return
       }
 
       this.filter = ''
-      this.isExistTickerError = false
       const ticker = {
-        name: this.tickerName,
-        price: 123,
+        name: tickerName,
+        price: '-',
       }
       this.tickers = [...this.tickers, ticker]
       subscribeTicker(ticker.name, (price) => this.updateTicker(ticker.name, price))
-      this.tickerName = ''
     },
 
     deleteTicker(ticker) {
@@ -293,21 +258,16 @@ export default {
       unsubscribeTicker(ticker.name)
     },
 
-    async updateTickers() {
-      if (!this.tickers.length) {
-        return
-      }
-
-      // const exchangeData = await loadTicker(this.tickers.map((t) => t.name))
-      // console.log(exchangeData)
-      // this.tickers.forEach((t) => {
-      //   const price = exchangeData[t.name.toUpperCase()]
-      //   t.price = price ?? '-'
-      // })
-    },
-
     formatPrice(price) {
       return typeof price !== 'number' ? '-' : price > 1 ? price.toFixed(2) : price.toPrecision(2)
+    },
+
+    calculateMaxGraphElements() {
+      if (this.$refs.graph) {
+        this.maxGraphElements = this.$refs.graph.clientWidth / 38
+      }
+
+      console.log(this.maxGraphElements)
     },
   },
 }

@@ -1,13 +1,19 @@
 импиративно декларативно
-модификатор
+модификатор @event.bla
 структурные директивы
 Всплытие событий. Только на уровне компонента. Напр клик.
 
 Vue добавляет bind для методов. setInterval(this.updateTickers, 5000)
+$ref не реактивен, после mounted
+$nextTick - after update dom
+this.$listeners.click vs props onClick (Function). Vue3 конвертирует @click="Fun" -> :click="Fun"
+
 
 2 vs 3
 - реактивность. Добавляет set/get в объекты. Плохо отслеживает массивы VS Proxy. отслеживает массивы, объекты
 - JS VS TS
+- $ref Arr - Array VS The last el
+- click.native vs click
 
 
 Object.fromEntries(Object.entries(rawData).map(([key, value]) => [key, value ? 1 / value : value]))

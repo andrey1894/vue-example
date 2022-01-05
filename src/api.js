@@ -21,7 +21,6 @@ const sendToWs = (dataMessage) => {
 }
 
 const subscribeTickerWs = (tickerName) => {
-  console.log('tickerName', tickerName)
   const message = {
     action: 'SubAdd',
     subs: [`5~CCCAGG~${tickerName}~USD`],
@@ -31,7 +30,6 @@ const subscribeTickerWs = (tickerName) => {
 }
 
 const unsubscribeTickerWs = (tickerName) => {
-  console.log('tickerName', tickerName)
   const message = {
     action: 'SubRemove',
     subs: [`5~CCCAGG~${tickerName}~USD`],
@@ -43,8 +41,7 @@ const unsubscribeTickerWs = (tickerName) => {
 socket.addEventListener('message', (e) => {
   const { TYPE: type, FROMSYMBOL: currency, PRICE: newPrice } = JSON.parse(e.data)
 
-  if (+type === AGGREGATE_INDEX) {
-    console.log('data', currency, newPrice)
+  if (+type === AGGREGATE_INDEX && newPrice !== undefined) {
     const handlers = tickerHandlers.get(currency) ?? []
     handlers.forEach((fn) => fn(newPrice))
   }
